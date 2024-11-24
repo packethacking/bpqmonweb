@@ -1,0 +1,74 @@
+<html>
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+    <link rel="stylesheet" href="hacker.css">
+    
+    <script src="/paho-mqtt.js"></script>
+
+    <title>Packet Tracer</title>
+</head>
+
+<body>
+    <main>
+        <ul id="data" class="list-group ht-tm-element text-monospace"></ul>
+    </main>
+
+
+    <script src="jquery-3.7.1.js"></script>
+    <script src="bootstrap.bundle.min.js"></script>
+
+
+    <script>       
+        var client = new Paho.Client(window.location.hostname, Number(window.location.port), "/mqtt", "clientId");
+        client.connect({ onSuccess: onConnect, useSSL: false, userName: "bpqmon", password: "bpqmon", reconnect: true});
+
+        function onConnect() {
+            console.log("Connected");
+            client.subscribe("PACKETNODE/ax25/trace/bpqformat/#");
+            client.onMessageArrived = onMessageArrived;
+            client.onConnectionLost = onConnectionLost;
+        }
+
+        function onConnectionLost(responseObject) {
+            console.log("onConnectionLost");
+            if (responseObject.errorCode !== 0) {
+                console.log("onConnectionLost:" + responseObject.errorMessage);
+            }
+        }
+
+        function onMessageArrived(message) {
+            console.log("onMessageArrived: " + message.payloadString);
+            var payload = JSON.parse(message.payloadString);
+
+            // mangle the payload
+            var innerPayload = payload["payload"].replace("<", "&lt;").replace(">", "&gt;")
+            var portIndex = innerPayload.indexOf("Port=")
+            var nextSpaceIndex = innerPayload.indexOf(" ", portIndex + 5); 
+            var portText = "0"; 
+            if (nextSpaceIndex != -1) {
+                portText = innerPayload.substring(portIndex + 5, nextSpaceIndex);
+                console.log("Extracted Port Text: " + portText);
+            }
+            if (portIndex != -1) {
+                var firstSpaceIndex = innerPayload.indexOf(" ", portIndex);
+                if (firstSpaceIndex != -1) {
+                    innerPayload = innerPayload.substring(firstSpaceIndex + 1);
+                }
+            }
+
+            document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" + payload["timestamp"] + " " + payload["from"] + " -> " + payload["to"] + " " + portText + " " + innerPayload + "</li>";
+
+            $("html, body").animate({ scrollTop: $(document).height() }, 1000); 
+        }
+    </script>
+</body>
+
+</html>
