@@ -26,8 +26,19 @@
     <script src="bootstrap.bundle.min.js"></script>
 
 
-    <script>       
-        var client = new Paho.Client(window.location.hostname, Number(window.location.port), "/mqtt", "clientId");
+    <script>
+        var wsString = "";       
+        if (window.location.protocol == "https:") {
+            wsString = "wss://";
+        } else {
+            wsString = "ws://";
+        }
+        wsString += window.location.hostname;
+        if (window.location.port != "") {
+            wsString += ":" + window.location.port;
+        }
+        wsString += "/mqtt";
+        var client = new Paho.Client(wsString, "bpqmonweb");
         client.connect({ onSuccess: onConnect, useSSL: false, userName: "bpqmon", password: "bpqmon", reconnect: true});
 
         function onConnect() {
