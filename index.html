@@ -28,9 +28,11 @@
 
 
     <script>
-        var wsString = "";       
+        var wsString = "";  
+        var useSSL = false;     
         if (window.location.protocol == "https:") {
             wsString = "wss://";
+            useSSL = true;
         } else {
             wsString = "ws://";
         }
@@ -41,7 +43,7 @@
         wsString += "/mqtt";
         console.log("wsString: " + wsString);   
         var client = new Paho.Client(wsString, "bpqmonweb");
-        client.connect({ onSuccess: onConnect, useSSL: false, userName: "bpqmon", password: "bpqmon", reconnect: true});
+        client.connect({ onSuccess: onConnect, useSSL: useSSL   , userName: "bpqmon", password: "bpqmon", reconnect: true});
 
         function onConnect() {
             console.log("Connected");
@@ -79,7 +81,7 @@
 
             document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" + payload["timestamp"] + " " + payload["from"] + " -> " + payload["to"] + " " + portText + " " + innerPayload + "</li>";
 
-            $("html, body").animate({ scrollTop: $(document).height() }, 10 0); 
+            $("html, body").animate({ scrollTop: $(document).height() }, 100); 
         }
     </script>
 </body>
