@@ -82,7 +82,7 @@
                 }
             }
 
-            document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" +     "<span class=\"color" + portText + "\">&nbsp</span>" + payload["timestamp"] + " " + "&nbsp <strong>" + payload["from"] + " -> " + payload["to"] + "</strong> " + portText + " " + innerPayload + "</li>";
+            document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" +     "<span class=\"color" + portText + "\">&nbsp</span>&nbsp" + payload["timestamp"] + " " + "<strong>" + payload["from"] + " -> " + payload["to"] + "</strong> " + portText + " " + innerPayload + "</li>";
 
             $("html, body").animate({ scrollTop: $(document).height() }, 100);
         }
