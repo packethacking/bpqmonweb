@@ -2,16 +2,18 @@
 
 <!doctype html>
 <html lang="en">
-  <head>
+
+<head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+    <link rel="stylesheet" href="/bootstrap.min.css"
+        integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <link rel="stylesheet" href="hacker.css">
     <link rel="stylesheet" href="overrides.css">
-    
+
     <script src="/paho-mqtt.js"></script>
 
     <title>Packet Tracer</title>
@@ -28,8 +30,8 @@
 
 
     <script>
-        var wsString = "";  
-        var useSSL = false;     
+        var wsString = "";
+        var useSSL = false;
         if (window.location.protocol == "https:") {
             wsString = "wss://";
             useSSL = true;
@@ -41,9 +43,9 @@
             wsString += ":" + window.location.port;
         }
         wsString += "/mqtt";
-        console.log("wsString: " + wsString);   
+        console.log("wsString: " + wsString);
         var client = new Paho.Client(wsString, "bpqmonweb");
-        client.connect({ onSuccess: onConnect, useSSL: useSSL   , userName: "bpqmon", password: "bpqmon", reconnect: true});
+        client.connect({ onSuccess: onConnect, useSSL: useSSL, userName: "bpqmon", password: "bpqmon", reconnect: true });
 
         function onConnect() {
             console.log("Connected");
@@ -66,12 +68,13 @@
             // mangle the payload
             var innerPayload = payload["payload"].replace("<", "&lt;").replace(">", "&gt;")
             var portIndex = innerPayload.indexOf("Port=")
-            var nextSpaceIndex = innerPayload.indexOf(" ", portIndex + 5); 
-            var portText = "0"; 
+            var nextSpaceIndex = innerPayload.indexOf(" ", portIndex + 5);
+            var portText = "0";
             if (nextSpaceIndex != -1) {
                 portText = innerPayload.substring(portIndex + 5, nextSpaceIndex);
                 console.log("Extracted Port Text: " + portText);
             }
+            // Remove the header part from BPQ and just show the payload
             if (portIndex != -1) {
                 var firstSpaceIndex = innerPayload.indexOf(" ", portIndex);
                 if (firstSpaceIndex != -1) {
@@ -79,9 +82,9 @@
                 }
             }
 
-            document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" + payload["timestamp"] + " " + payload["from"] + " -> " + payload["to"] + " " + portText + " " + innerPayload + "</li>";
+            document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" +     "<span class=\"color" + portText + "\">&nbsp</span>" + payload["timestamp"] + " " + "&nbsp <strong>" + payload["from"] + " -> " + payload["to"] + "</strong> " + portText + " " + innerPayload + "</li>";
 
-            $("html, body").animate({ scrollTop: $(document).height() }, 100); 
+            $("html, body").animate({ scrollTop: $(document).height() }, 100);
         }
     </script>
 </body>
