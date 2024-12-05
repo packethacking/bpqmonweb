@@ -10,6 +10,7 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <link rel="stylesheet" href="hacker.css">
+    <link rel="stylesheet" href="overrides.css">
     
     <script src="/paho-mqtt.js"></script>
 
@@ -78,7 +79,7 @@
 
             document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" + payload["timestamp"] + " " + payload["from"] + " -> " + payload["to"] + " " + portText + " " + innerPayload + "</li>";
 
-            $("html, body").animate({ scrollTop: $(document).height() }, 100); 
+            $("html, body").animate({ scrollTop: $(document).height() }, 10 0); 
         }
     </script>
 </body>
