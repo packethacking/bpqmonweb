@@ -38,6 +38,7 @@
             wsString += ":" + window.location.port;
         }
         wsString += "/mqtt";
+        console.log("wsString: " + wsString);   
         var client = new Paho.Client(wsString, "bpqmonweb");
         client.connect({ onSuccess: onConnect, useSSL: false, userName: "bpqmon", password: "bpqmon", reconnect: true});
 
@@ -77,7 +78,7 @@
 
             document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" + payload["timestamp"] + " " + payload["from"] + " -> " + payload["to"] + " " + portText + " " + innerPayload + "</li>";
 
-            $("html, body").animate({ scrollTop: $(document).height() }, 1000); 
+            $("html, body").animate({ scrollTop: $(document).height() }, 100); 
         }
     </script>
 </body>
