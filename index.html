@@ -56,9 +56,9 @@
         }
 
         var clientName = "bpqmonweb" + generateRandomString();
-        console.log("clientName: " + clientName);
+        console.log("clientName: " + clientName);   
         var client = new Paho.Client(wsString, clientName);   
-        client.connect({ onSuccess: onConnect, useSSL: useSSL, userName: "bpqmon", password: "bpqmon", reconnect: true });
+        client.connect({ onSuccess: onConnect, useSSL: useSSL, userName: "bpqmonweb", password: "bpqmonweb", reconnect: true });
 
         function onConnect() {
             console.log("Connected");
