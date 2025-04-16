@@ -100,11 +100,22 @@
 
             var li = document.createElement("li");
             li.className = "list-group-item";
-            var span = document.createElement("span");
-            span.className = "color" + portText;
-            span.innerHTML = "&nbsp";
+            var colourSpan = document.createElement("span");
+            colourSpan.className = "color" + portText;
+            colourSpan.innerHTML = "&nbsp";
             li.appendChild(span);
-            li.textContent = payload["timestamp"] + " " + payload["from"] + " -> " + payload["to"] + " " + portText + " " + innerPayload;
+            var timeSpan = document.createElement("span");
+            timeSpan.textContent = payload["timestamp"];
+            li.appendChild(timeSpan);
+            var fromSpan = document.createElement("strong");
+            fromSpan.textContent = payload["from"] + " -> " + payload["to"];
+            li.appendChild(fromSpan);
+            var portSpan = document.createElement("span");
+            portSpan.textContent = " " + portText + " ";
+            li.appendChild(portSpan);
+            var payloadSpan = document.createElement("span");
+            payloadSpan.textContent = innerPayload;
+            li.appendChild(payloadSpan);    
             document.getElementById("data").appendChild(li);
 
             $("html, body").animate({ scrollTop: $(document).height() }, 100);
