@@ -37,7 +37,7 @@
         var useSSL = false;
         if (window.location.protocol == "https:") {
             wsString = "wss://";
-            useSSL = true;
+                 = true;
         } else {
             wsString = "ws://";
         }
@@ -98,7 +98,14 @@
                 }
             }
 
-            document.getElementById("data").innerHTML += "<li class=\"list-group-item\">" +     "<span class=\"color" + portText + "\">&nbsp</span>&nbsp" + payload["timestamp"] + " " + "<strong>" + payload["from"] + " -> " + payload["to"] + "</strong> " + portText + " " + innerPayload + "</li>";
+            var li = document.createElement("li");
+            li.className = "list-group-item";
+            var span = document.createElement("span");
+            span.className = "color" + portText;
+            span.innerHTML = "&nbsp";
+            li.appendChild(span);
+            li.textContent = payload["timestamp"] + " " + payload["from"] + " -> " + payload["to"] + " " + portText + " " + innerPayload;
+            document.getElementById("data").appendChild(li);
 
             $("html, body").animate({ scrollTop: $(document).height() }, 100);
         }
