@@ -82,8 +82,8 @@
             var payload = JSON.parse(message.payloadString);
 
             // mangle the payload
-            var innerPayload = payload["payload"].replace("<", "&lt;").replace(">", "&gt;")
-            var portIndex = innerPayload.indexOf("Port=")
+            var innerPayload = payload["payload"];
+            var portIndex = innerPayload.indexOf("Port=");  
             var nextSpaceIndex = innerPayload.indexOf(" ", portIndex + 5);
             var portText = "0";
             if (nextSpaceIndex != -1) {
