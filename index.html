@@ -37,7 +37,7 @@
         var useSSL = false;
         if (window.location.protocol == "https:") {
             wsString = "wss://";
-                 = true;
+            useSSL = true;
         } else {
             wsString = "ws://";
         }
