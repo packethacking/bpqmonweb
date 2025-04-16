@@ -104,8 +104,7 @@
             colourSpan.className = "color" + portText;
             colourSpan.innerHTML = "&nbsp";
             li.appendChild(colourSpan   );
-            var timeSpan = document.createElement("span");
-            timeSpan    .className = "color" + portText;
+            var timeSpan = document.createElement("span");  
             timeSpan.textContent = payload["timestamp"] + " ";
             li.appendChild(timeSpan);
             var fromSpan = document.createElement("strong");
