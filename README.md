@@ -1,8 +1,21 @@
 # Web output for BPQ MQTT Monitoring
 
-This project is a simple wrapper around the [BPQ](https://www.cantab.net/users/john.wiseman/Documents/BPQ32.html) MQTT output that displays it on a infinite-scrolling web page. In Black and Green, because `~~aesthetics~~`.
+This project is a simple wrapper around the [BPQ](https://www.cantab.net/users/john.wiseman/Documents/BPQ32.html) MQTT output that displays it on an infinite-scrolling web page. Neon vaporwave, because `~~aesthetics~~`.
 
-It is intended to work without internet access and host all the required files locally.
+It is intended to work without internet access and host all the required files locally. There are no web fonts and no CDN links. The page is only `index.html`, `style.css` and the vendored `paho-mqtt.js`.
+
+The layout is tuned for a 1920 x 720 display read from across the room, but any wide window works.
+
+## Status bar
+
+A bar fixed to the bottom of the page shows:
+
+1. Connection state. `LIVE`, `CONNECTING` (with a retry countdown), `RECONNECTING` or `LOST`, plus the websocket URL.
+2. Node callsigns seen, taken from the MQTT topic.
+3. Packet counters. Total, received, sent, and packets in the last minute.
+4. Ports in use. One chip per port with its colour and packet count. A chip glows for two seconds after each packet on that port.
+
+If the page loads before the MQTT server is up, it retries the connection with a backoff of 2 to 30 seconds and shows the countdown in the bar. It never needs a manual reload. The page also keeps at most 1000 packet rows and reloads itself every 12 hours.
 
 This project is part of a wider project to wrap BPQ into modern accessible UIs and interfaces. See [bpq-compose](https://github.com/packethacking/bpq-compose).
 
@@ -70,6 +83,8 @@ docker run -d -p 8081:80 ghcr.io/packethacking/bpqmonweb:main
 ```
 
 This expects the MQTT server to be running on the same machine on port 9001.
+
+The nginx configuration proxies `/mqtt` to the host name `mosquitto`. If that name does not resolve when nginx starts, nginx exits and the browser shows its own error page. Start the MQTT server first, or use `depends_on` in a compose file. Once nginx is up, the page itself retries the MQTT connection on its own.
 
 http://localhost:8081 should load the interface.
 

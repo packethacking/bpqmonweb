@@ -1,125 +1,375 @@
-<html>
-
 <!doctype html>
 <html lang="en">
 
 <head>
-    <!-- Required meta tags -->
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Reload every 12 hours -->
+    <!-- Reload every 12 hours as a belt-and-braces guard against long-run memory growth -->
     <meta http-equiv="refresh" content="43200">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="/bootstrap.min.css"
-        integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
-    <link rel="stylesheet" href="hacker.css">
-    <link rel="stylesheet" href="overrides.css">
-
-    <script src="/paho-mqtt.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="paho-mqtt.js"></script>
 
     <title>Packet Tracer</title>
 </head>
 
 <body>
     <main>
-        <ul id="data" class="list-group ht-tm-element text-monospace"></ul>
+        <div id="empty" class="empty">
+            <div class="empty-title">waiting for packets</div>
+            <div class="empty-sub" id="empty-broker"></div>
+        </div>
+        <ol id="data" class="packets"></ol>
     </main>
 
-
-    <script src="jquery-3.7.1.js"></script>
-    <script src="bootstrap.bundle.min.js"></script>
-
+    <footer id="status" class="bar">
+        <div class="cell title">PACKET TRACER</div>
+        <div id="conn" class="cell conn connecting">
+            <span class="led"></span>
+            <span id="conn-state" class="state">CONNECTING</span>
+            <span id="conn-detail" class="detail"></span>
+        </div>
+        <div class="cell nodes">
+            <span class="label">nodes</span>
+            <span id="nodes" class="num">&mdash;</span>
+        </div>
+        <div class="cell pkts">
+            <span class="label">pkts</span>
+            <span id="total" class="num">0</span>
+            <span class="sub"><span class="rx">RX</span> <span id="rx" class="num">0</span></span>
+            <span class="sub"><span class="tx">TX</span> <span id="tx" class="num">0</span></span>
+            <span class="sub"><span id="rate" class="num">0</span>/min</span>
+        </div>
+        <div class="cell ports">
+            <span class="label">ports</span>
+            <span id="ports" class="chips"></span>
+        </div>
+    </footer>
 
     <script>
-        var wsString = "";
-        var useSSL = false;
-        if (window.location.protocol == "https:") {
-            wsString = "wss://";
-            useSSL = true;
-        } else {
-            wsString = "ws://";
-        }
-        wsString += window.location.hostname;
-        if (window.location.port != "") {
-            wsString += ":" + window.location.port;
-        }
-        wsString += "/mqtt";
-        console.log("wsString: " + wsString);
+        (function () {
+            "use strict";
 
-        function generateRandomString() {
-            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
-            for (let i = 0; i < 4; i++) {
-                const randomIndex = Math.floor(Math.random() * characters.length);
-                result += characters[randomIndex];
+            var MAX_ROWS = 1000;          // keep the DOM bounded on a display that runs for days
+            var RETRY_MIN = 2000;         // first retry after a failed connect, ms
+            var RETRY_MAX = 30000;        // cap for the backoff, ms
+            var WATCHDOG_MS = 15000;      // periodic "are we connected?" check
+            var HOT_MS = 2000;            // how long a port chip glows after a packet
+            var TOPIC = "PACKETNODE/ax25/trace/bpqformat/#";
+
+            // ---------- websocket URL ----------
+            var useSSL = window.location.protocol === "https:";
+            var wsString = (useSSL ? "wss://" : "ws://") + window.location.hostname;
+            if (window.location.port !== "") {
+                wsString += ":" + window.location.port;
             }
-            return result;
-        }
+            wsString += "/mqtt";
+            console.log("wsString: " + wsString);
 
-        var clientName = "bpqmonweb" + generateRandomString();
-        console.log("clientName: " + clientName);   
-        var client = new Paho.Client(wsString, clientName);   
-        client.connect({ onSuccess: onConnect, useSSL: useSSL, userName: "bpqmonweb", password: "bpqmonweb", reconnect: true });
-
-        function onConnect() {
-            console.log("Connected");
-            client.subscribe("PACKETNODE/ax25/trace/bpqformat/#");
-            client.onMessageArrived = onMessageArrived;
-            client.onConnectionLost = onConnectionLost;
-        }
-
-        function onConnectionLost(responseObject) {
-            console.log("onConnectionLost");
-            if (responseObject.errorCode !== 0) {
-                console.log("onConnectionLost:" + responseObject.errorMessage);
+            function generateRandomString(length) {
+                var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+                var result = "";
+                for (var i = 0; i < length; i++) {
+                    result += characters[Math.floor(Math.random() * characters.length)];
+                }
+                return result;
             }
-        }
 
-        function onMessageArrived(message) {
-            console.log("onMessageArrived: " + message.payloadString);
-            var payload = JSON.parse(message.payloadString);
+            var clientName = "bpqmonweb" + generateRandomString(4);
+            console.log("clientName: " + clientName);
 
-            // mangle the payload
-            var innerPayload = payload["payload"];
-            var portIndex = innerPayload.indexOf("Port=");  
-            var nextSpaceIndex = innerPayload.indexOf(" ", portIndex + 5);
-            var portText = "0";
-            if (nextSpaceIndex != -1) {
-                portText = innerPayload.substring(portIndex + 5, nextSpaceIndex);
-                console.log("Extracted Port Text: " + portText);
+            // ---------- state ----------
+            var state = {
+                total: 0,
+                rx: 0,
+                tx: 0,
+                recent: [],              // timestamps (ms) of packets in the last 60 s
+                ports: new Map(),        // port number -> { count, hotUntil }
+                nodes: new Set()
+            };
+
+            var els = {
+                data: document.getElementById("data"),
+                empty: document.getElementById("empty"),
+                emptyBroker: document.getElementById("empty-broker"),
+                conn: document.getElementById("conn"),
+                connState: document.getElementById("conn-state"),
+                connDetail: document.getElementById("conn-detail"),
+                nodes: document.getElementById("nodes"),
+                total: document.getElementById("total"),
+                rx: document.getElementById("rx"),
+                tx: document.getElementById("tx"),
+                rate: document.getElementById("rate"),
+                ports: document.getElementById("ports")
+            };
+
+            els.emptyBroker.textContent = wsString;
+
+            // ---------- connection handling ----------
+            var client = new Paho.Client(wsString, clientName);
+            var connecting = false;
+            var retryTimer = null;
+            var retryAt = 0;
+            var retryDelay = RETRY_MIN;
+
+            function setConn(mode, detail) {
+                els.conn.className = "cell conn " + mode;
+                els.connState.textContent = mode.toUpperCase();
+                els.connDetail.textContent = detail || "";
             }
-            // Remove the header part from BPQ and just show the payload
-            if (portIndex != -1) {
-                var firstSpaceIndex = innerPayload.indexOf(" ", portIndex);
-                if (firstSpaceIndex != -1) {
-                    innerPayload = innerPayload.substring(firstSpaceIndex + 1);
+
+            function clearRetry() {
+                if (retryTimer !== null) {
+                    clearTimeout(retryTimer);
+                    retryTimer = null;
+                }
+                retryAt = 0;
+            }
+
+            function scheduleRetry(reason) {
+                clearRetry();
+                retryAt = Date.now() + retryDelay;
+                retryTimer = setTimeout(function () {
+                    retryTimer = null;
+                    connect();
+                }, retryDelay);
+                console.log("Retrying connect in " + (retryDelay / 1000) + "s" + (reason ? " (" + reason + ")" : ""));
+                retryDelay = Math.min(retryDelay * 2, RETRY_MAX);
+                renderCountdown();
+            }
+
+            function renderCountdown() {
+                if (retryAt === 0) {
+                    return;
+                }
+                var secs = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+                setConn("connecting", "retry in " + secs + "s");
+            }
+
+            function connect() {
+                if (connecting || client.isConnected()) {
+                    return;
+                }
+                connecting = true;
+                clearRetry();
+                setConn("connecting", wsString);
+                try {
+                    client.connect({
+                        onSuccess: onConnectSuccess,
+                        onFailure: onConnectFailure,
+                        useSSL: useSSL,
+                        userName: "bpqmonweb",
+                        password: "bpqmonweb",
+                        reconnect: true,
+                        timeout: 10,
+                        keepAliveInterval: 30
+                    });
+                } catch (e) {
+                    // Paho throws if a socket already exists (for example its own auto-reconnect is in flight).
+                    connecting = false;
+                    console.log("connect() refused: " + e.message);
                 }
             }
 
-            var li = document.createElement("li");
-            li.className = "list-group-item";
-            var colourSpan = document.createElement("span");
-            colourSpan.className = "color" + portText;
-            colourSpan.innerHTML = "&nbsp";
-            li.appendChild(colourSpan   );
-            var timeSpan = document.createElement("span");  
-            timeSpan.textContent = payload["timestamp"] + " ";
-            li.appendChild(timeSpan);
-            var fromSpan = document.createElement("strong");
-            fromSpan.textContent = payload["from"] + " -> " + payload["to"];
-            li.appendChild(fromSpan);
-            var portSpan = document.createElement("span");
-            portSpan.textContent = " " + portText + " ";
-            li.appendChild(portSpan);
-            var payloadSpan = document.createElement("span");
-            payloadSpan.textContent = innerPayload;
-            li.appendChild(payloadSpan);    
-            document.getElementById("data").appendChild(li);
+            function onConnectSuccess() {
+                connecting = false;
+                // onConnected (below) handles subscribe and UI for both first connects and auto reconnects.
+            }
 
-            $("html, body").animate({ scrollTop: $(document).height() }, 100);
-        }
+            function onConnectFailure(responseObject) {
+                connecting = false;
+                var reason = responseObject && responseObject.errorMessage ? responseObject.errorMessage : "unknown";
+                console.log("Connect failed: " + reason);
+                scheduleRetry(reason);
+            }
+
+            client.onConnected = function (reconnect, uri) {
+                console.log((reconnect ? "Reconnected" : "Connected") + " to " + uri);
+                connecting = false;
+                retryDelay = RETRY_MIN;
+                clearRetry();
+                setConn("live", wsString);
+                // Subscribe on every (re)connect: a clean session drops subscriptions.
+                client.subscribe(TOPIC);
+            };
+
+            client.onConnectionLost = function (responseObject) {
+                connecting = false;
+                var reason = responseObject && responseObject.errorMessage ? responseObject.errorMessage : "";
+                console.log("onConnectionLost: " + reason);
+                if (responseObject && responseObject.errorCode !== 0 && responseObject.reconnect) {
+                    // Paho will keep retrying on its own after a lost connection.
+                    setConn("reconnecting", reason);
+                } else {
+                    setConn("lost", reason);
+                    scheduleRetry(reason || "connection lost");
+                }
+            };
+
+            client.onMessageArrived = onMessageArrived;
+
+            // Once a second: refresh the countdown and the rate. Every WATCHDOG_MS: if nothing is
+            // connected and no retry is pending, try again. This also takes over from Paho's own
+            // reconnect loop if that is sitting in a long wait.
+            var ticks = 0;
+            setInterval(function () {
+                ticks += 1;
+                if (ticks % (WATCHDOG_MS / 1000) === 0 && !client.isConnected() && !connecting && retryTimer === null) {
+                    console.log("Watchdog: not connected, attempting connect");
+                    connect();
+                }
+                renderCountdown();
+                renderRate();
+            }, 1000);
+
+            // ---------- packets ----------
+            function parsePort(innerPayload) {
+                var portIndex = innerPayload.indexOf("Port=");
+                if (portIndex === -1) {
+                    return { port: "0", text: innerPayload };
+                }
+                var nextSpaceIndex = innerPayload.indexOf(" ", portIndex + 5);
+                var portText = "0";
+                var rest = innerPayload;
+                if (nextSpaceIndex !== -1) {
+                    portText = innerPayload.substring(portIndex + 5, nextSpaceIndex);
+                    rest = innerPayload.substring(nextSpaceIndex + 1);
+                } else {
+                    portText = innerPayload.substring(portIndex + 5);
+                    rest = "";
+                }
+                return { port: portText, text: rest };
+            }
+
+            function parseTopic(topic) {
+                // PACKETNODE/ax25/trace/bpqformat/<CALLSIGN>/rcvd|sent
+                var parts = (topic || "").split("/");
+                var dir = parts[parts.length - 1];
+                var node = parts.length >= 2 ? parts[parts.length - 2] : "";
+                return { node: node, dir: dir === "sent" ? "tx" : "rx" };
+            }
+
+            function span(className, text) {
+                var el = document.createElement("span");
+                if (className) {
+                    el.className = className;
+                }
+                el.textContent = text;
+                return el;
+            }
+
+            function onMessageArrived(message) {
+                var payload;
+                try {
+                    payload = JSON.parse(message.payloadString);
+                } catch (e) {
+                    console.log("Bad payload: " + message.payloadString);
+                    return;
+                }
+
+                var parsed = parsePort(String(payload["payload"] || ""));
+                var topic = parseTopic(message.destinationName);
+                var portNum = parseInt(parsed.port, 10);
+                var portClass = (portNum >= 0 && portNum <= 15) ? portNum : 0;
+
+                // ---- row ----
+                var li = document.createElement("li");
+                li.className = "pkt port-" + portClass;
+                li.appendChild(span("time", String(payload["timestamp"] || "")));
+                li.appendChild(span("dir " + topic.dir, topic.dir.toUpperCase()));
+
+                var route = span("route", "");
+                route.appendChild(span("from", String(payload["from"] || "")));
+                route.appendChild(span("arrow", "→"));
+                route.appendChild(span("to", String(payload["to"] || "")));
+                li.appendChild(route);
+
+                li.appendChild(span("port", parsed.port));
+                li.appendChild(span("payload", parsed.text));
+
+                els.data.appendChild(li);
+                while (els.data.childElementCount > MAX_ROWS) {
+                    els.data.removeChild(els.data.firstElementChild);
+                }
+                els.empty.classList.add("hidden");
+
+                // ---- stats ----
+                var now = Date.now();
+                state.total += 1;
+                if (topic.dir === "tx") {
+                    state.tx += 1;
+                } else {
+                    state.rx += 1;
+                }
+                state.recent.push(now);
+                if (topic.node) {
+                    state.nodes.add(topic.node);
+                }
+                var entry = state.ports.get(parsed.port);
+                if (!entry) {
+                    entry = { count: 0, hotUntil: 0, cls: portClass };
+                    state.ports.set(parsed.port, entry);
+                }
+                entry.count += 1;
+                entry.hotUntil = now + HOT_MS;
+
+                renderStatus();
+                window.scrollTo({ top: document.body.scrollHeight });
+            }
+
+            // ---------- status bar ----------
+            function renderRate() {
+                var cutoff = Date.now() - 60000;
+                while (state.recent.length && state.recent[0] < cutoff) {
+                    state.recent.shift();
+                }
+                els.rate.textContent = String(state.recent.length);
+                var now = Date.now();
+                var chips = els.ports.children;
+                for (var i = 0; i < chips.length; i++) {
+                    var entry = state.ports.get(chips[i].dataset.port);
+                    chips[i].classList.toggle("hot", !!entry && entry.hotUntil > now);
+                }
+            }
+
+            function renderStatus() {
+                els.total.textContent = String(state.total);
+                els.rx.textContent = String(state.rx);
+                els.tx.textContent = String(state.tx);
+                els.nodes.textContent = state.nodes.size ? Array.from(state.nodes).sort().join(", ") : "—";
+
+                var keys = Array.from(state.ports.keys()).sort(function (a, b) {
+                    return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0);
+                });
+                var now = Date.now();
+                keys.forEach(function (key) {
+                    var entry = state.ports.get(key);
+                    var chip = els.ports.querySelector('[data-port="' + key + '"]');
+                    if (!chip) {
+                        chip = document.createElement("span");
+                        chip.className = "chip port-" + entry.cls;
+                        chip.dataset.port = key;
+                        chip.appendChild(span("swatch", ""));
+                        chip.appendChild(span("pnum", key));
+                        chip.appendChild(span("count", "0"));
+                        els.ports.appendChild(chip);
+                    }
+                    chip.querySelector(".count").textContent = String(entry.count);
+                    chip.classList.toggle("hot", entry.hotUntil > now);
+                });
+                // keep chips in port order
+                keys.forEach(function (key) {
+                    els.ports.appendChild(els.ports.querySelector('[data-port="' + key + '"]'));
+                });
+                renderRate();
+            }
+
+            // Expose for console testing.
+            window.onMessageArrived = onMessageArrived;
+
+            connect();
+        })();
     </script>
 </body>
 
