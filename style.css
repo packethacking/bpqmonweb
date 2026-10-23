@@ -2,28 +2,29 @@
    Tuned for a 1920 x 720 display read from a distance. Fully offline, no web fonts. */
 
 :root {
-  --bg: #0a0616;
-  --bg-2: #160a2e;
-  --row-alt: rgba(255, 255, 255, 0.03);
-  --text: #e9e4ff;
-  --dim: #8a86a8;
+  --bg: #040804;
+  --bg-2: #0a160c;
+  --row-alt: rgba(57, 255, 20, 0.035);
+  --text: #d6ffd6;
+  --dim: #5e8f62;
+  --green: #39ff14;
   --magenta: #ff2bd6;
   --cyan: #00f0ff;
   --violet: #a855f7;
   --sunset: #ffb000;
   --red: #ff3860;
-  --grid: rgba(255, 43, 214, 0.12);
+  --grid: rgba(57, 255, 20, 0.10);
   --bar-h: 44px;
   --font: ui-monospace, "Cascadia Mono", "JetBrains Mono", "Fira Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
 
   /* Port colours. Index 0 is "unknown". */
-  --port-0: #8a86a8;
-  --port-1: #ff2bd6;
+  --port-0: #5e8f62;
+  --port-1: #39ff14;
   --port-2: #00f0ff;
   --port-3: #ffe600;
-  --port-4: #a855f7;
+  --port-4: #ff2bd6;
   --port-5: #ff7a00;
-  --port-6: #39ff14;
+  --port-6: #a855f7;
   --port-7: #ff4d8d;
   --port-8: #4dc9ff;
   --port-9: #c6ff00;
@@ -60,10 +61,10 @@ body::before {
   z-index: 0;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(10, 6, 22, 0.95) 0%, rgba(10, 6, 22, 0.6) 55%, rgba(10, 6, 22, 0) 100%),
+    linear-gradient(180deg, rgba(4, 8, 4, 0.95) 0%, rgba(4, 8, 4, 0.6) 55%, rgba(4, 8, 4, 0) 100%),
     repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 64px),
     repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 48px),
-    radial-gradient(ellipse at 50% 120%, rgba(255, 43, 214, 0.28) 0%, rgba(0, 240, 255, 0.10) 35%, transparent 70%);
+    radial-gradient(ellipse at 50% 120%, rgba(57, 255, 20, 0.22) 0%, rgba(0, 240, 255, 0.10) 35%, rgba(255, 43, 214, 0.06) 55%, transparent 72%);
   background-attachment: fixed;
 }
 
@@ -103,8 +104,8 @@ main {
   font-size: 2em;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  color: var(--violet);
-  text-shadow: 0 0 8px var(--violet), 0 0 28px rgba(168, 85, 247, 0.6);
+  color: var(--green);
+  text-shadow: 0 0 8px var(--green), 0 0 28px rgba(57, 255, 20, 0.55);
   animation: breathe 2.4s ease-in-out infinite;
 }
 
@@ -123,7 +124,7 @@ main {
 .pkt {
   --port: var(--port-0);
   display: grid;
-  grid-template-columns: 9ch 3ch 24ch 3ch 1fr;
+  grid-template-columns: 9ch 3ch 21ch 3ch 1fr;
   gap: 0 0.9ch;
   align-items: start;
   padding: 1px 12px 1px 0;
@@ -134,8 +135,8 @@ main {
 .pkt:nth-child(even) { background: var(--row-alt); }
 
 .pkt .time {
-  color: var(--violet);
-  opacity: 0.85;
+  color: var(--dim);
+  opacity: 1;
   padding-left: 0.6ch;
   white-space: nowrap;
 }
@@ -151,22 +152,29 @@ main {
   justify-self: start;
 }
 
-.pkt .dir.rx { color: var(--cyan); border: 1px solid rgba(0, 240, 255, 0.5); }
+.pkt .dir.rx { color: var(--green); border: 1px solid rgba(57, 255, 20, 0.5); }
 .pkt .dir.tx { color: var(--magenta); border: 1px solid rgba(255, 43, 214, 0.5); }
 
+/* from | arrow | to as fixed columns so the arrows line up down the page.
+   An AX.25 callsign is at most 9 characters (6 plus "-" plus a 2 digit SSID). */
 .pkt .route {
+  display: grid;
+  grid-template-columns: 9ch 2ch 9ch;
+  gap: 0 0.4ch;
   font-weight: 700;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.pkt .from { color: var(--cyan); text-shadow: 0 0 6px rgba(0, 240, 255, 0.55); }
-.pkt .to { color: var(--magenta); text-shadow: 0 0 6px rgba(255, 43, 214, 0.55); }
+.pkt .route > span { overflow: hidden; text-overflow: ellipsis; }
+.pkt .from { text-align: right; }
+.pkt .to { text-align: left; }
+.pkt .arrow { text-align: center; }
+
+.pkt .from { color: var(--green); text-shadow: 0 0 6px rgba(57, 255, 20, 0.55); }
+.pkt .to { color: var(--cyan); text-shadow: 0 0 6px rgba(0, 240, 255, 0.55); }
 .pkt .arrow {
-  color: var(--sunset);
-  text-shadow: 0 0 8px var(--sunset);
-  padding: 0 0.3ch;
+  color: var(--magenta);
+  text-shadow: 0 0 8px var(--magenta);
   font-weight: 400;
 }
 
@@ -215,11 +223,11 @@ main {
   height: var(--bar-h);
   display: flex;
   align-items: stretch;
-  background: rgba(10, 6, 22, 0.82);
+  background: rgba(4, 8, 4, 0.84);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-top: 1px solid var(--magenta);
-  box-shadow: 0 -1px 0 rgba(255, 43, 214, 0.35), 0 -6px 24px rgba(255, 43, 214, 0.22), 0 -1px 40px rgba(0, 240, 255, 0.12);
+  border-top: 1px solid var(--green);
+  box-shadow: 0 -1px 0 rgba(57, 255, 20, 0.35), 0 -6px 24px rgba(57, 255, 20, 0.18), 0 -1px 48px rgba(255, 43, 214, 0.14);
   font-size: 17px;
   white-space: nowrap;
   overflow: hidden;
@@ -230,7 +238,7 @@ main {
   align-items: center;
   gap: 0.7ch;
   padding: 0 16px;
-  border-right: 1px solid rgba(233, 228, 255, 0.12);
+  border-right: 1px solid rgba(57, 255, 20, 0.18);
   flex: 0 0 auto;
 }
 
@@ -248,10 +256,10 @@ main {
 .num { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
 
 .cell.title {
-  color: var(--magenta);
+  color: var(--green);
   font-weight: 700;
   letter-spacing: 0.3em;
-  text-shadow: 0 0 6px var(--magenta), 0 0 20px rgba(255, 43, 214, 0.7);
+  text-shadow: 0 0 6px var(--green), 0 0 18px rgba(57, 255, 20, 0.6), 0 0 36px rgba(255, 43, 214, 0.45);
 }
 
 /* connection LED */
@@ -259,18 +267,18 @@ main {
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  background: var(--violet);
-  box-shadow: 0 0 6px var(--violet), 0 0 14px var(--violet);
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan), 0 0 14px var(--cyan);
   animation: pulse 1.4s ease-in-out infinite;
 }
 
 .conn .state { font-weight: 700; letter-spacing: 0.12em; }
 
-.conn.live .led { background: var(--cyan); box-shadow: 0 0 6px var(--cyan), 0 0 16px var(--cyan); animation-duration: 2.6s; }
-.conn.live .state { color: var(--cyan); text-shadow: 0 0 8px rgba(0, 240, 255, 0.6); }
+.conn.live .led { background: var(--green); box-shadow: 0 0 6px var(--green), 0 0 16px var(--green); animation-duration: 2.6s; }
+.conn.live .state { color: var(--green); text-shadow: 0 0 8px rgba(57, 255, 20, 0.6); }
 
-.conn.connecting .led { background: var(--violet); box-shadow: 0 0 6px var(--violet), 0 0 16px var(--violet); animation-duration: 1.2s; }
-.conn.connecting .state { color: var(--violet); }
+.conn.connecting .led { background: var(--cyan); box-shadow: 0 0 6px var(--cyan), 0 0 16px var(--cyan); animation-duration: 1.2s; }
+.conn.connecting .state { color: var(--cyan); }
 
 .conn.reconnecting .led { background: var(--sunset); box-shadow: 0 0 6px var(--sunset), 0 0 16px var(--sunset); animation-duration: 0.6s; }
 .conn.reconnecting .state { color: var(--sunset); }
@@ -281,7 +289,7 @@ main {
 .conn .detail { color: var(--dim); font-size: 0.85em; }
 
 .pkts .sub { color: var(--dim); }
-.pkts .rx { color: var(--cyan); font-size: 0.78em; letter-spacing: 0.1em; }
+.pkts .rx { color: var(--green); font-size: 0.78em; letter-spacing: 0.1em; }
 .pkts .tx { color: var(--magenta); font-size: 0.78em; letter-spacing: 0.1em; }
 
 .cell.nodes { max-width: 28ch; overflow: hidden; }
@@ -303,7 +311,7 @@ main {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   transition: box-shadow 0.4s ease, background 0.4s ease;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(57, 255, 20, 0.03);
 }
 
 .chip .swatch {
@@ -326,7 +334,7 @@ main {
 /* ---------- animations ---------- */
 
 @keyframes flash {
-  from { background-color: rgba(255, 43, 214, 0.28); }
+  from { background-color: rgba(57, 255, 20, 0.22); }
   to { background-color: transparent; }
 }
 

@@ -1,6 +1,6 @@
 # Web output for BPQ MQTT Monitoring
 
-This project is a simple wrapper around the [BPQ](https://www.cantab.net/users/john.wiseman/Documents/BPQ32.html) MQTT output that displays it on an infinite-scrolling web page. Neon vaporwave, because `~~aesthetics~~`.
+This project is a simple wrapper around the [BPQ](https://www.cantab.net/users/john.wiseman/Documents/BPQ32.html) MQTT output that displays it on an infinite-scrolling web page. Green hacker terminal with neon vaporwave flourishes, because `~~aesthetics~~`.
 
 It is intended to work without internet access and host all the required files locally. There are no web fonts and no CDN links. The page is only `index.html`, `style.css` and the vendored `paho-mqtt.js`.
 
