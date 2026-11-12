@@ -86,7 +86,8 @@
                 tx: 0,
                 recent: [],              // timestamps (ms) of packets in the last 60 s
                 ports: new Map(),        // port number -> { count, hotUntil }
-                nodes: new Set()
+                nodes: new Set(),
+                filter: new Set()        // port numbers to show. Empty means show every port.
             };
 
             var els = {
@@ -276,6 +277,10 @@
                 // ---- row ----
                 var li = document.createElement("li");
                 li.className = "pkt port-" + portClass;
+                li.dataset.port = parsed.port;
+                if (state.filter.size && !state.filter.has(parsed.port)) {
+                    li.classList.add("filtered");
+                }
                 li.appendChild(span("time", String(payload["timestamp"] || "")));
                 li.appendChild(span("dir " + topic.dir, topic.dir.toUpperCase()));
 
@@ -350,6 +355,10 @@
                         chip = document.createElement("span");
                         chip.className = "chip port-" + entry.cls;
                         chip.dataset.port = key;
+                        chip.setAttribute("role", "button");
+                        chip.setAttribute("tabindex", "0");
+                        chip.setAttribute("aria-pressed", "false");
+                        chip.title = "Show only this port. Click more ports to add them.";
                         chip.appendChild(span("swatch", ""));
                         chip.appendChild(span("pnum", key));
                         chip.appendChild(span("count", "0"));
@@ -364,6 +373,49 @@
                 });
                 renderRate();
             }
+
+            // ---------- port filter ----------
+            // Click a port chip to show only that port. Click more chips to add ports.
+            // Click the last selected chip again to show every port.
+            function applyFilter() {
+                var active = state.filter.size > 0;
+                els.ports.classList.toggle("filtering", active);
+                var chips = els.ports.children;
+                for (var i = 0; i < chips.length; i++) {
+                    var on = state.filter.has(chips[i].dataset.port);
+                    chips[i].classList.toggle("selected", on);
+                    chips[i].setAttribute("aria-pressed", on ? "true" : "false");
+                }
+                var rows = els.data.children;
+                for (var j = 0; j < rows.length; j++) {
+                    rows[j].classList.toggle("filtered", active && !state.filter.has(rows[j].dataset.port));
+                }
+                window.scrollTo({ top: document.body.scrollHeight });
+            }
+
+            function togglePort(target) {
+                var chip = target.closest ? target.closest(".chip") : null;
+                if (!chip) {
+                    return false;
+                }
+                var port = chip.dataset.port;
+                if (state.filter.has(port)) {
+                    state.filter.delete(port);
+                } else {
+                    state.filter.add(port);
+                }
+                applyFilter();
+                return true;
+            }
+
+            els.ports.addEventListener("click", function (e) {
+                togglePort(e.target);
+            });
+            els.ports.addEventListener("keydown", function (e) {
+                if ((e.key === "Enter" || e.key === " ") && togglePort(e.target)) {
+                    e.preventDefault();
+                }
+            });
 
             // Expose for console testing.
             window.onMessageArrived = onMessageArrived;

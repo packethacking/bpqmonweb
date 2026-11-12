@@ -134,6 +134,15 @@ main {
 
 .pkt:nth-child(even) { background: var(--row-alt); }
 
+/* Rows hidden by the port filter. */
+.pkt.filtered { display: none; }
+
+/* Keep the stripes alternating over the visible rows only, where the browser can. */
+@supports selector(:nth-child(even of .pkt)) {
+  .pkt:nth-child(even) { background: none; }
+  .pkt:nth-child(even of :not(.filtered)) { background: var(--row-alt); }
+}
+
 .pkt .time {
   color: var(--dim);
   opacity: 1;
@@ -310,9 +319,18 @@ main {
   color: var(--port);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  transition: box-shadow 0.4s ease, background 0.4s ease;
+  transition: box-shadow 0.4s ease, background 0.4s ease, opacity 0.2s ease;
   background: rgba(57, 255, 20, 0.03);
+  cursor: pointer;
+  user-select: none;
 }
+
+.chip:hover { background: color-mix(in srgb, var(--port) 14%, transparent); }
+.chip:focus-visible { outline: 2px solid var(--port); outline-offset: 2px; }
+
+/* While a filter is active, dim the ports that are not shown. */
+.chips.filtering .chip:not(.selected) { opacity: 0.35; }
+.chips.filtering .chip.selected { background: color-mix(in srgb, var(--port) 22%, transparent); }
 
 .chip .swatch {
   width: 10px;

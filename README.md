@@ -15,6 +15,8 @@ A bar fixed to the bottom of the page shows:
 3. Packet counters. Total, received, sent, and packets in the last minute.
 4. Ports in use. One chip per port with its colour and packet count. A chip glows for two seconds after each packet on that port.
 
+Click a port chip to show only the packets for that port. Click more chips to add ports. Click a selected chip again to remove it. If no chip is selected, the page shows every port.
+
 If the page loads before the MQTT server is up, it retries the connection with a backoff of 2 to 30 seconds and shows the countdown in the bar. It never needs a manual reload. The page also keeps at most 1000 packet rows and reloads itself every 12 hours.
 
 This project is part of a wider project to wrap BPQ into modern accessible UIs and interfaces. See [bpq-compose](https://github.com/packethacking/bpq-compose).
